@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { AddPhraseDialog } from "@/components/add-phrase-dialog";
 
 interface Phrase {
   id: string;
@@ -16,6 +17,7 @@ export default function PhrasePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const storedCookie = localStorage.getItem("maimemo_cookie");
@@ -51,7 +53,7 @@ export default function PhrasePage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">My Phrases</h2>
-        <Button disabled>Add Phrase (Coming Soon)</Button>
+        <Button onClick={() => setIsDialogOpen(true)}>Add Phrase</Button>
       </div>
 
       {error && <div className="text-red-500">{error}</div>}
@@ -122,6 +124,15 @@ export default function PhrasePage() {
           Next
         </Button>
       </div>
+
+      <AddPhraseDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        onSuccess={() => {
+          fetchPhrases();
+        }}
+        cookie={cookie}
+      />
     </div>
   );
 }

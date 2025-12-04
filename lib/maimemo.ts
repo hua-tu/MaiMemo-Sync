@@ -193,4 +193,100 @@ export class MaiMemoService {
 
     return phrases;
   }
+
+  /**
+   * Get captcha image.
+   */
+  static async getCaptcha(cookie: string): Promise<ArrayBuffer> {
+    const url = `${BASE_URL}/service/captcha/image2/?sid=${Math.random()}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...HEADERS,
+        cookie: cookie,
+      },
+    });
+    return await response.arrayBuffer();
+  }
+
+  /**
+   * Save new phrase.
+   */
+  static async savePhrase(
+    cookie: string,
+    data: {
+      voc: string;
+      phrase: string;
+      interpretation: string;
+      origin: string;
+      publish: boolean;
+      captcha: string;
+    }
+  ): Promise<void> {
+    const url = `${BASE_URL}/custom/save/phrase`;
+    const formData = new URLSearchParams();
+    formData.append("id", "0");
+    formData.append("voc", data.voc);
+    formData.append("phrase", data.phrase);
+    formData.append("interpretation", data.interpretation);
+    formData.append("origin", data.origin);
+    formData.append("publish", data.publish ? "1" : "0");
+    formData.append("captcha", data.captcha);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...HEADERS,
+        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "x-requested-with": "XMLHttpRequest",
+        cookie: cookie,
+      },
+      body: formData,
+    });
+
+    const resData = await response.json();
+    if (resData.valid !== 1) {
+      throw new Error(
+        resData.errorCode || resData.error || "Failed to save phrase"
+      );
+    }
+  }
+
+  /**
+   * Search vocabulary by spelling.
+   */
+  static async searchVocabulary(
+    cookie: string,
+    spelling: string
+  ): Promise<{ voc_id: number; spelling: string } | null> {
+    const url = `${BASE_URL}/api/v2/vocabulary/query`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...HEADERS,
+        "content-type": "application/json; charset=UTF-8",
+        "x-requested-with": "XMLHttpRequest",
+        cookie: cookie,
+      },
+      body: JSON.stringify({ spelling, limit: 1 }),
+    });
+
+    // If empty response or error, it might return empty string or error json
+    // Based on user input, empty response means not found?
+    // User provided `helloerror.json` which was empty? No, `helloerror.json` was empty content in curl output?
+    // Wait, the user said "如果是不存在的单词，输出就是空@[helloerror.json]" and the file content was empty.
+    // Let's handle text response.
+    const text = await response.text();
+    if (!text) return null;
+
+    try {
+      const data = JSON.parse(text);
+      if (data && data.voc_id) {
+        return { voc_id: data.voc_id, spelling: data.spelling };
+      }
+    } catch (e) {
+      // ignore parse error
+    }
+    return null;
+  }
 }

@@ -148,4 +148,49 @@ export class MaiMemoService {
       throw new Error(data.error || "Save failed");
     }
   }
+
+  /**
+   * Get phrase list.
+   */
+  static async getPhraseList(cookie: string, page: number = 1): Promise<any[]> {
+    // offset=0 for page 1, offset=30 for page 2, etc.
+    const offset = (page - 1) * 30;
+    const url = `${BASE_URL}/custom/show/phrase?offset=${offset}&sort=created_time`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...HEADERS,
+        cookie: cookie,
+      },
+    });
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    const phrases: any[] = [];
+
+    $("#phraseList li").each((_, el) => {
+      const $el = $(el);
+      const titleEl = $el.find(".cloud-title");
+      const literaryEls = $el.find(".cloud-literary");
+
+      const word = titleEl.text().trim();
+      const editUrl = titleEl.find("a.edit").attr("href") || "";
+      const id = new URLSearchParams(editUrl.split("?")[1]).get("id") || "";
+
+      const sentence = $(literaryEls[0]).text().trim();
+      const translation = $(literaryEls[1]).text().trim();
+
+      if (word) {
+        phrases.push({
+          id,
+          word,
+          sentence,
+          translation,
+        });
+      }
+    });
+
+    return phrases;
+  }
 }

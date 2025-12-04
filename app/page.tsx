@@ -1,13 +1,29 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
-import { NotepadSync } from "@/components/notepad-sync";
-import { Button } from "@/components/ui/button";
 
 export default function Home() {
-  const [cookie, setCookie] = useState<string | null>(null);
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const cookie = localStorage.getItem("maimemo_cookie");
+    if (cookie) {
+      router.push("/dashboard/notepad");
+    } else {
+      setLoading(false);
+    }
+  }, [router]);
+
+  const handleLoginSuccess = (cookie: string) => {
+    localStorage.setItem("maimemo_cookie", cookie);
+    router.push("/dashboard/notepad");
+  };
+
+  if (loading) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -25,21 +41,7 @@ export default function Home() {
           </h2>
         </div>
 
-        {!cookie ? (
-          <LoginForm onLoginSuccess={setCookie} />
-        ) : (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-4">
-              <span className="text-sm text-green-600 font-medium">
-                Logged in
-              </span>
-              <Button variant="ghost" size="sm" onClick={() => setCookie(null)}>
-                Logout
-              </Button>
-            </div>
-            <NotepadSync cookie={cookie} />
-          </div>
-        )}
+        <LoginForm onLoginSuccess={handleLoginSuccess} />
       </div>
     </div>
   );

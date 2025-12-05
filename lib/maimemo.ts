@@ -289,4 +289,24 @@ export class MaiMemoService {
     }
     return null;
   }
+
+  /**
+   * Get all phrase words (iterate through all pages).
+   */
+  static async getAllPhraseWords(cookie: string): Promise<string[]> {
+    let page = 1;
+    let allWords: string[] = [];
+    while (true) {
+      const phrases = await this.getPhraseList(cookie, page);
+      if (phrases.length === 0) {
+        break;
+      }
+      const words = phrases.map((p) => p.word);
+      allWords = allWords.concat(words);
+      page++;
+      // Safety break to avoid infinite loops if something goes wrong
+      if (page > 100) break;
+    }
+    return Array.from(new Set(allWords)); // Deduplicate
+  }
 }

@@ -296,8 +296,10 @@ export class MaiMemoService {
   static async getAllPhraseWords(cookie: string): Promise<string[]> {
     let page = 1;
     let allWords: string[] = [];
-    while (true) {
+    // 预留分页的功能
+    while (page < 2) {
       const phrases = await this.getPhraseList(cookie, page);
+      console.log(phrases, "phajlr", page);
       if (phrases.length === 0) {
         break;
       }
@@ -305,7 +307,7 @@ export class MaiMemoService {
       allWords = allWords.concat(words);
       page++;
       // Safety break to avoid infinite loops if something goes wrong
-      if (page > 100) break;
+      if (page > 2) break;
     }
     return Array.from(new Set(allWords)); // Deduplicate
   }

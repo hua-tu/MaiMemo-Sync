@@ -8,7 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ALI_DOCKER_HUB_REGISTRY
 
     steps:
       # 获取代码

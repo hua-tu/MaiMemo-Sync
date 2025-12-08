@@ -1,4 +1,4 @@
-name: Docker 部署 CaptchaVision API
+name: Docker 部署 MaiMemo-Sync
 
 on:
   push:
@@ -9,7 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ALI_DOCKER_HUB_REGISTRY
-    
+
     steps:
       # 获取代码
       - name: 迁出代码

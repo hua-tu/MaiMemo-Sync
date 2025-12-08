@@ -311,4 +311,46 @@ export class MaiMemoService {
     }
     return Array.from(new Set(allWords)); // Deduplicate
   }
+
+  /**
+   * Recognize captcha using local service.
+   */
+  static async recognizeCaptcha(imageBuffer: ArrayBuffer): Promise<string> {
+    const serviceUrl =
+      process.env.CAPTCHA_SERVICE_URL || "http://localhost:8010";
+    const url = `${serviceUrl}/predict`;
+
+    try {
+      console.log(
+        `Recognizing captcha, buffer size: ${imageBuffer.byteLength}`
+      );
+      // Create a Blob from the ArrayBuffer
+      const blob = new Blob([imageBuffer], { type: "image/jpeg" });
+      const formData = new FormData();
+      // Try 'file' as the key, which is a common convention.
+      formData.append("file", blob, "captcha.jpg");
+
+      const response = await fetch(url, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        console.error(
+          "Captcha service error:",
+          response.status,
+          response.statusText
+        );
+        const text = await response.text();
+        console.error("Captcha service response:", text);
+        return "";
+      }
+
+      const data = await response.json();
+      return data.result || "";
+    } catch (error) {
+      console.error("Failed to recognize captcha:", error);
+      return "";
+    }
+  }
 }

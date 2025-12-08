@@ -29,10 +29,12 @@ export function AddPhraseDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  const isgetCaptcha = true;
   useEffect(() => {
     if (isOpen) {
       fetchCaptcha();
-      // Reset form
+    } else {
+      // Reset state when closed
       setVoc("");
       setVocId("");
       setPhrase("");
@@ -41,25 +43,36 @@ export function AddPhraseDialog({
       setPublish(false);
       setCaptcha("");
       setError("");
-    } else {
       // Cleanup blob url
       if (captchaUrl) {
         URL.revokeObjectURL(captchaUrl);
-        setCaptchaUrl(null);
       }
+      setCaptchaUrl(null);
     }
   }, [isOpen]);
 
   const fetchCaptcha = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/maimemo/captcha", {
-        headers: { "x-maimemo-cookie": cookie },
-      });
+      const res = await fetch(
+        isgetCaptcha
+          ? `/api/maimemo/captcha?time=${Date.now()}`
+          : "/api/maimemo/captcha",
+        {
+          headers: { "x-maimemo-cookie": cookie },
+        }
+      );
       if (!res.ok) throw new Error("Failed to load captcha");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setCaptchaUrl(url);
+
+      if (isgetCaptcha) {
+        const code = res.headers.get("x-captcha-code");
+        if (code) {
+          setCaptcha(code);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {

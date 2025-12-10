@@ -34,6 +34,7 @@ export default function DashboardLayout({
     { name: "Notepad Sync", href: "/dashboard/notepad" },
     { name: "My Phrases", href: "/dashboard/phrase" },
     { name: "PhrasePage", href: "/dashboard/PhrasePage" },
+    { name: "package-add", href: "/dashboard/package-add" },
   ];
 
   return (

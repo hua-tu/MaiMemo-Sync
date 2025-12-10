@@ -33,6 +33,7 @@ export default function DashboardLayout({
   const navItems = [
     { name: "Notepad Sync", href: "/dashboard/notepad" },
     { name: "My Phrases", href: "/dashboard/phrase" },
+    { name: "PhrasePage", href: "/dashboard/PhrasePage" },
   ];
 
   return (

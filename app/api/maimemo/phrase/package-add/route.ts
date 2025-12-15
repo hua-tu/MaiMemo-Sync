@@ -67,7 +67,7 @@ export async function POST(request: Request) {
           });
           continue;
         }
-
+        console.log(captchaCode, "captchaCode");
         // 4. Save Phrase
         await MaiMemoService.savePhrase(cookie, {
           voc: vocId,

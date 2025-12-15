@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,8 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Save,
+  Clipboard,
 } from "lucide-react";
 
 interface PhraseRow {
@@ -31,6 +33,17 @@ interface PhraseRow {
   publish: boolean;
   status: "idle" | "loading" | "success" | "error";
   error?: string;
+}
+
+type PhraseSnapshot = Pick<
+  PhraseRow,
+  "voc" | "phrase" | "interpretation" | "origin" | "publish"
+>;
+
+interface SavedLog {
+  id: string;
+  createdAt: string;
+  rows: PhraseSnapshot[];
 }
 
 export default function PackageAddPage() {
@@ -47,11 +60,29 @@ export default function PackageAddPage() {
     },
   ]);
   const [isUploading, setIsUploading] = useState(false);
+  const [logs, setLogs] = useState<SavedLog[]>([]);
+  const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
+  const [importJson, setImportJson] = useState("");
 
   useEffect(() => {
     const storedCookie = localStorage.getItem("maimemo_cookie");
     setCookie(storedCookie);
   }, []);
+
+  useEffect(() => {
+    const storedLogs = localStorage.getItem("maimemo_phrase_logs");
+    if (storedLogs) {
+      try {
+        setLogs(JSON.parse(storedLogs));
+      } catch {
+        // ignore corrupted logs
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("maimemo_phrase_logs", JSON.stringify(logs));
+  }, [logs]);
 
   const handleAddRow = () => {
     setRows((prev) => [
@@ -170,6 +201,91 @@ export default function PackageAddPage() {
     }
   };
 
+  const handleSaveLog = () => {
+    const snapshot: PhraseSnapshot[] = rows
+      .filter((row) => row.voc && row.phrase && row.interpretation)
+      .map((row) => ({
+        voc: row.voc,
+        phrase: row.phrase,
+        interpretation: row.interpretation,
+        origin: row.origin,
+        publish: row.publish,
+      }));
+
+    if (snapshot.length === 0) {
+      alert("没有可保存的例句（请填写必要字段）");
+      return;
+    }
+
+    const newLog: SavedLog = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      rows: snapshot,
+    };
+
+    setLogs((prev) => [newLog, ...prev]);
+    alert("已保存当前例句列表到日志");
+  };
+
+  const handleCopyLog = async (logId: string) => {
+    const log = logs.find((l) => l.id === logId);
+    if (!log) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(log.rows, null, 2));
+      alert("日志已复制为 JSON");
+    } catch {
+      alert("复制失败，请手动选择文本复制");
+    }
+  };
+
+  const handleLoadLog = (log: SavedLog) => {
+    const mappedRows: PhraseRow[] = log.rows.map((r) => ({
+      id: crypto.randomUUID(),
+      voc: r.voc,
+      phrase: r.phrase,
+      interpretation: r.interpretation,
+      origin: r.origin,
+      publish: r.publish,
+      status: "idle",
+    }));
+    setRows(mappedRows.length ? mappedRows : rows);
+    setIsLogDialogOpen(false);
+  };
+
+  const handleImportJson = () => {
+    if (!importJson.trim()) {
+      alert("请先粘贴 JSON 数据");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(importJson);
+      if (!Array.isArray(parsed)) {
+        throw new Error("JSON 须为数组");
+      }
+      const mappedRows: PhraseRow[] = parsed.map((item: any) => ({
+        id: crypto.randomUUID(),
+        voc: item.voc || "",
+        phrase: item.phrase || "",
+        interpretation: item.interpretation || "",
+        origin: item.origin || "",
+        publish: Boolean(item.publish),
+        status: "idle",
+      }));
+
+      if (mappedRows.length === 0) {
+        alert("导入内容为空");
+        return;
+      }
+
+      setRows(mappedRows);
+      setImportJson("");
+      setIsLogDialogOpen(false);
+      alert("已通过 JSON 导入例句列表");
+    } catch (err: any) {
+      alert("导入失败: " + err.message);
+    }
+  };
+
   if (!cookie) {
     return (
       <div className="p-8 text-center">
@@ -194,6 +310,14 @@ export default function PackageAddPage() {
           <Button variant="outline" onClick={handleAddRow}>
             <Plus className="mr-2 h-4 w-4" />
             Add Row
+          </Button>
+          <Button variant="outline" onClick={handleSaveLog}>
+            <Save className="mr-2 h-4 w-4" />
+            保存日志
+          </Button>
+          <Button variant="outline" onClick={() => setIsLogDialogOpen(true)}>
+            <Clipboard className="mr-2 h-4 w-4" />
+            查看日志
           </Button>
           <Button onClick={handleUpload} disabled={isUploading}>
             {isUploading ? (
@@ -335,6 +459,78 @@ export default function PackageAddPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isLogDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4 border-b pb-4">
+              <div>
+                <div className="text-xl font-semibold">保存的日志</div>
+                <div className="text-sm text-muted-foreground">
+                  每条日志保存一次例句列表，可复制 JSON 或直接导入。
+                </div>
+              </div>
+              <Button variant="ghost" onClick={() => setIsLogDialogOpen(false)}>
+                关闭
+              </Button>
+            </div>
+
+            <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+              {logs.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  暂无日志，先点击“保存日志”创建。
+                </div>
+              ) : (
+                logs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex items-start justify-between gap-3 rounded-md border p-3"
+                  >
+                    <div className="space-y-1">
+                      <div className="font-medium">
+                        保存时间：{new Date(log.createdAt).toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        条目数：{log.rows.length}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyLog(log.id)}
+                      >
+                        复制 JSON
+                      </Button>
+                      <Button size="sm" onClick={() => handleLoadLog(log)}>
+                        导入到列表
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">通过 JSON 导入</div>
+              <textarea
+                value={importJson}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                  setImportJson(e.target.value)
+                }
+                placeholder='粘贴例句数组，如: [{"voc":"apple","phrase":"I ate an apple.","interpretation":"我吃了一个苹果。"}]'
+                rows={6}
+                className="w-full rounded-md border bg-white px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handleImportJson}>
+                  导入
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -246,6 +246,7 @@ export class MaiMemoService {
 
     const resData = await response.json();
     if (resData.valid !== 1) {
+      console.log(resData, "res.date");
       throw new Error(
         resData.errorCode || resData.error || "Failed to save phrase"
       );

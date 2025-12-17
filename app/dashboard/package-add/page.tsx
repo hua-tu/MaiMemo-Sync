@@ -63,6 +63,7 @@ export default function PackageAddPage() {
   const [logs, setLogs] = useState<SavedLog[]>([]);
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const [importJson, setImportJson] = useState("");
+  const [hasLoadedLogs, setHasLoadedLogs] = useState(false);
 
   useEffect(() => {
     const storedCookie = localStorage.getItem("maimemo_cookie");
@@ -70,19 +71,24 @@ export default function PackageAddPage() {
   }, []);
 
   useEffect(() => {
-    const storedLogs = localStorage.getItem("maimemo_phrase_logs");
+    const storedLogs = localStorage.getItem("packageadd");
     if (storedLogs) {
       try {
         setLogs(JSON.parse(storedLogs));
+        setHasLoadedLogs(true);
       } catch {
         // ignore corrupted logs
+        setHasLoadedLogs(true);
       }
+    } else {
+      setHasLoadedLogs(true);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("maimemo_phrase_logs", JSON.stringify(logs));
-  }, [logs]);
+    if (!hasLoadedLogs) return;
+    localStorage.setItem("packageadd", JSON.stringify(logs));
+  }, [logs, hasLoadedLogs]);
 
   const handleAddRow = () => {
     setRows((prev) => [
@@ -224,7 +230,7 @@ export default function PackageAddPage() {
     };
 
     setLogs((prev) => [newLog, ...prev]);
-    alert("已保存当前例句列表到日志");
+    // alert("已保存当前例句列表到日志");
   };
 
   const handleCopyLog = async (logId: string) => {
@@ -232,9 +238,9 @@ export default function PackageAddPage() {
     if (!log) return;
     try {
       await navigator.clipboard.writeText(JSON.stringify(log.rows, null, 2));
-      alert("日志已复制为 JSON");
+      // alert("日志已复制为 JSON");
     } catch {
-      alert("复制失败，请手动选择文本复制");
+      // alert("复制失败，请手动选择文本复制");
     }
   };
 
@@ -280,7 +286,7 @@ export default function PackageAddPage() {
       setRows(mappedRows);
       setImportJson("");
       setIsLogDialogOpen(false);
-      alert("已通过 JSON 导入例句列表");
+      // alert("已通过 JSON 导入例句列表");
     } catch (err: any) {
       alert("导入失败: " + err.message);
     }
